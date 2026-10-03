@@ -1,0 +1,19 @@
+import jwt from "jsonwebtoken";
+import { env } from "../config/env.js";
+
+export function protect(req, res, next) {
+  const header = req.headers.authorization || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+
+  if (!token) {
+    return res.status(401).json({ message: "Please log in to continue" });
+  }
+
+  try {
+    const payload = jwt.verify(token, env.jwtSecret);
+    req.userId = payload.id;
+    next();
+  } catch {
+    res.status(401).json({ message: "Your session expired. Please log in again" });
+  }
+}

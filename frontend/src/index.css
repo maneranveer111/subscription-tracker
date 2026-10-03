@@ -1,1 +1,18 @@
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque", "DM Sans", ui-sans-serif, sans-serif;
+
+  --color-ink: #14213d;
+  --color-ink-soft: #566178;
+  --color-paper: #f3f5f7;
+  --color-line: #d9dee5;
+  --color-marigold: #e8a33d;
+  --color-teal: #1b8a8f;
+  --color-coral: #c8443f;
+}
+
+body {
+  @apply bg-paper font-sans text-ink antialiased;
+}

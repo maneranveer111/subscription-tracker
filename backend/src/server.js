@@ -2,19 +2,20 @@ import dns from "dns";
 
 dns.setServers(["8.8.8.8"]);
 
-import "dotenv/config";
-import mongoose from "mongoose";
+import { env } from "./config/env.js";
+import { connectDB } from "./config/db.js";
 import app from "./app.js";
+import { startReminderJob } from "./jobs/reminderJob.js";
 
-const PORT = process.env.PORT || 5000;
+async function start() {
+  try {
+    await connectDB();
+    app.listen(env.port, () => console.log(`Server running on port ${env.port}`));
+    startReminderJob();
+  } catch (err) {
+    console.error("Failed to start server:", err.message);
+    process.exit(1);
+  }
+}
 
-mongoose
-    .connect(process.env.MONGO_URI)
-    .then(() => {
-        console.log("MongoDB connected");
-        app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-    })
-    .catch((err) => {
-        console.error("DB connection failed:", err.message);
-        process.exit(1);
-    });
+start();
