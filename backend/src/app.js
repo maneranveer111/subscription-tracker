@@ -10,8 +10,13 @@ import { notFound, errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
 
-// CLIENT_URL can hold several origins separated by commas
-app.use(cors({ origin: env.clientUrl.split(",").map((o) => o.trim()) }));
+// CLIENT_URL can hold several origins separated by commas (e.g. "http://localhost:5173,https://your-app.vercel.app")
+const allowedOrigins = env.clientUrl
+  .split(",")
+  .map((o) => o.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json({ limit: "100kb" }));
 
 app.get("/health", (req, res) => res.json({ status: "ok" }));

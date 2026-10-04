@@ -6,6 +6,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Subscriptions from "./pages/Subscriptions";
 import Insights from "./pages/Insights";
+import Profile from "./pages/Profile";
 
 function AppLayout() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/subscriptions" element={<Subscriptions />} />
           <Route path="/insights" element={<Insights />} />
+          <Route path="/profile" element={<Profile />} />
         </Route>
       </Route>
 

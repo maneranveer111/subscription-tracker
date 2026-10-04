@@ -3,8 +3,24 @@ import { CHART_COLORS } from "../utils/constants";
 import { formatCurrency } from "../utils/formatters";
 import { card } from "../utils/ui";
 
+function CategoryTick({ y, payload }) {
+  return (
+    <text
+      x={0}
+      y={y}
+      dy={4}
+      textAnchor="start"
+      fill="#566178"
+      fontSize={13}
+    >
+      {payload?.value}
+    </text>
+  );
+}
+
 export default function SpendChart({ byCategory }) {
-  const height = Math.max(180, byCategory.length * 44);
+  // 50px per bar keeps them compact whether there are 1 or 10 categories
+  const height = byCategory.length * 50;
 
   return (
     <section className={card}>
@@ -22,10 +38,11 @@ export default function SpendChart({ byCategory }) {
               <YAxis
                 type="category"
                 dataKey="category"
-                width={110}
+                width={140}
+                interval={0}
                 tickLine={false}
                 axisLine={false}
-                tick={{ fontSize: 13, fill: "#566178" }}
+                tick={CategoryTick}
               />
               <Tooltip
                 cursor={{ fill: "#f3f5f7" }}

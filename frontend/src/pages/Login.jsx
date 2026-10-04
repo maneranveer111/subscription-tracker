@@ -1,12 +1,16 @@
 import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "../context/AuthContext";
 import { getErrorMessage } from "../api/axios";
 import { btnPrimary, card, input, label } from "../utils/ui";
 
+import AuthHero from "../components/AuthHero";
+
 export default function Login() {
-  const { user, login } = useAuth();
+  const { user, login, loginWithGoogle } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -27,61 +31,122 @@ export default function Login() {
     }
   };
 
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setError("");
+    try {
+      await loginWithGoogle(credentialResponse.credential);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <form onSubmit={handleSubmit} className={`${card} w-full max-w-sm`}>
-        <h1 className="font-display text-2xl font-semibold">Log in</h1>
-        <p className="mt-1 text-sm text-ink-soft">See what's renewing and what it costs you.</p>
-
-        {error && (
-          <p role="alert" className="mt-4 rounded-md bg-coral/10 px-3 py-2 text-sm text-coral">
-            {error}
-          </p>
-        )}
-
-        <div className="mt-5">
-          <label htmlFor="email" className={label}>
-            Email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            value={form.email}
-            onChange={handleChange}
-            required
-            className={input}
-          />
+    <div className="flex min-h-screen items-center justify-center bg-paper px-4 py-8 sm:px-6 lg:px-8">
+      <div className="grid w-full max-w-5xl items-center gap-10 lg:grid-cols-12 lg:gap-12">
+        {/* Left Column: Brand & Product Info */}
+        <div className="lg:col-span-7">
+          <AuthHero />
         </div>
 
-        <div className="mt-4">
-          <label htmlFor="password" className={label}>
-            Password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            value={form.password}
-            onChange={handleChange}
-            required
-            className={input}
-          />
+        {/* Right Column: Login Card */}
+        <div className="lg:col-span-5">
+          <form onSubmit={handleSubmit} className={`${card} w-full shadow-lg shadow-ink/5`}>
+            <div className="mb-2">
+              <h2 className="font-display text-2xl font-bold text-ink">Welcome back</h2>
+              <p className="mt-1 text-sm text-ink-soft">Log in to manage your active subscriptions.</p>
+            </div>
+
+            {error && (
+              <p role="alert" className="mt-4 rounded-md bg-coral/10 px-3 py-2 text-sm text-coral">
+                {error}
+              </p>
+            )}
+
+            <div className="mt-5">
+              <label htmlFor="email" className={label}>
+                Email address
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                value={form.email}
+                onChange={handleChange}
+                required
+                className={input}
+                placeholder="name@example.com"
+              />
+            </div>
+
+            <div className="mt-4">
+              <label htmlFor="password" className={label}>
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                  className={`${input} pr-14`}
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute inset-y-0 right-2.5 flex items-center text-xs font-medium text-ink-soft hover:text-ink"
+                  tabIndex={-1}
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
+              <label className="mt-2 flex cursor-pointer items-center gap-2 text-xs text-ink-soft select-none">
+                <input
+                  type="checkbox"
+                  checked={showPassword}
+                  onChange={(e) => setShowPassword(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-line accent-ink"
+                />
+                Show password
+              </label>
+            </div>
+
+            <button type="submit" disabled={submitting} className={`${btnPrimary} mt-6 w-full`}>
+              {submitting ? "Logging in..." : "Log in"}
+            </button>
+
+            <div className="relative my-5 flex items-center">
+              <div className="flex-grow border-t border-line" />
+              <span className="mx-3 text-xs text-ink-soft">or continue with</span>
+              <div className="flex-grow border-t border-line" />
+            </div>
+
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => setError("Google sign-in failed. Please try again.")}
+                text="signin_with"
+                shape="rectangular"
+                theme="outline"
+                size="large"
+                width="320"
+              />
+            </div>
+
+            <p className="mt-5 text-center text-sm text-ink-soft">
+              New to SubTracker?{" "}
+              <Link to="/register" className="font-semibold text-ink underline hover:text-ink/80">
+                Create an account
+              </Link>
+            </p>
+          </form>
         </div>
-
-        <button type="submit" disabled={submitting} className={`${btnPrimary} mt-6 w-full`}>
-          {submitting ? "Logging in..." : "Log in"}
-        </button>
-
-        <p className="mt-4 text-center text-sm text-ink-soft">
-          New here?{" "}
-          <Link to="/register" className="font-semibold text-ink underline">
-            Create an account
-          </Link>
-        </p>
-      </form>
+      </div>
     </div>
   );
 }
+

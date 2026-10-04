@@ -34,7 +34,7 @@ export default function Dashboard() {
     );
   }
 
-  const isEmpty = summary.activeCount === 0 && summary.pausedCount === 0;
+  const isEmpty = !summary || (summary.activeCount === 0 && summary.pausedCount === 0);
 
   if (isEmpty) {
     return (

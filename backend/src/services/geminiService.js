@@ -9,39 +9,69 @@ function httpError(message, status) {
   return err;
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 // Calls Gemini over its REST API (Node 18+ has fetch built in) and returns parsed JSON
 export async function generateJson(prompt) {
   if (!env.geminiApiKey) {
     throw httpError("AI suggestions aren't set up: GEMINI_API_KEY is missing on the server", 503);
   }
 
-  const response = await fetch(`${API_BASE}/${env.geminiModel}:generateContent`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-goog-api-key": env.geminiApiKey,
-    },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.3, responseMimeType: "application/json" },
-    }),
-  });
+  const candidateModels = [
+    ...new Set([env.geminiModel, "gemini-3.5-flash-lite", "gemini-flash-latest"].filter(Boolean)),
+  ];
 
-  if (!response.ok) {
-    console.error("Gemini error:", response.status, await response.text());
-    throw httpError("The AI service didn't respond. Try again in a moment", 502);
+  for (const model of candidateModels) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const response = await fetch(`${API_BASE}/${model}:generateContent`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": env.geminiApiKey,
+          },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.3, responseMimeType: "application/json" },
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const text = (data?.candidates?.[0]?.content?.parts ?? [])
+            .map((p) => p.text || "")
+            .join("");
+
+          try {
+            return JSON.parse(text.replace(/```json|```/g, "").trim());
+          } catch {
+            throw httpError("The AI returned an unreadable answer. Try again", 502);
+          }
+        }
+
+        const errorText = await response.text();
+        console.error(`Gemini (${model}, attempt ${attempt}/2): HTTP ${response.status}`, errorText);
+
+        // 503 (high demand / overloaded) or 429 (quota): try next attempt or fallback to next model
+        if (response.status === 503 || response.status === 429) {
+          if (attempt < 2) {
+            await sleep(800);
+            continue;
+          }
+          // If this model is overloaded, immediately fail over to next model
+          break;
+        } else {
+          break;
+        }
+      } catch (err) {
+        if (err.status) throw err;
+        console.error(`Gemini network error (${model}):`, err.message);
+        if (attempt < 2) await sleep(800);
+      }
+    }
   }
 
-  const data = await response.json();
-  const text = (data?.candidates?.[0]?.content?.parts ?? [])
-    .map((p) => p.text || "")
-    .join("");
-
-  try {
-    return JSON.parse(text.replace(/```json|```/g, "").trim());
-  } catch {
-    throw httpError("The AI returned an unreadable answer. Try again", 502);
-  }
+  throw httpError("The AI service didn't respond. Try again in a moment", 502);
 }
 
 export function buildCancelPrompt(subscriptions, currency) {

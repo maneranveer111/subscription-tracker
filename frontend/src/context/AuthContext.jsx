@@ -29,13 +29,19 @@ export function AuthProvider({ children }) {
     setUser(data.user);
   };
 
+  const loginWithGoogle = async (credential) => {
+    const data = await authApi.googleAuth(credential);
+    localStorage.setItem("token", data.token);
+    setUser(data.user);
+  };
+
   const logout = () => {
     localStorage.removeItem("token");
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, setUser, loading, login, register, loginWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -43,3 +49,4 @@ export function AuthProvider({ children }) {
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);
+

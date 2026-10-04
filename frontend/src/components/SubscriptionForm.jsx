@@ -23,16 +23,32 @@ const fromSubscription = (sub) => ({
   usageNotes: sub.usageNotes || "",
 });
 
+// Today's date in YYYY-MM-DD (local time) used as the minimum allowed renewal date
+const todayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
 // Used for both adding (no `subscription`) and editing
 export default function SubscriptionForm({ subscription, onSubmit, onCancel, saving, error }) {
   const [form, setForm] = useState(subscription ? fromSubscription(subscription) : emptyForm);
+  const [dateError, setDateError] = useState("");
 
   const categories = CATEGORIES.includes(form.category) ? CATEGORIES : [form.category, ...CATEGORIES];
 
-  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+    if (e.target.name === "nextRenewalDate") setDateError("");
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    // Reject past dates
+    if (form.nextRenewalDate < todayStr()) {
+      setDateError("Renewal date cannot be in the past. Please pick today or a future date.");
+      return;
+    }
+    setDateError("");
     onSubmit({
       name: form.name.trim(),
       cost: Number(form.cost),
@@ -134,8 +150,14 @@ export default function SubscriptionForm({ subscription, onSubmit, onCancel, sav
               value={form.nextRenewalDate}
               onChange={handleChange}
               required
-              className={input}
+              min={todayStr()}
+              className={`${input} ${dateError ? "border-coral ring-1 ring-coral/30" : ""}`}
             />
+            {dateError && (
+              <p role="alert" className="mt-1 text-xs text-coral">
+                {dateError}
+              </p>
+            )}
           </div>
 
           <div className="sm:col-span-2">

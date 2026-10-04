@@ -1,6 +1,5 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { btnSecondary } from "../utils/ui";
 
 const links = [
   { to: "/", label: "Dashboard", end: true },
@@ -9,7 +8,14 @@ const links = [
 ];
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+
+  const initials = (user?.name || "")
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
     <header className="border-b border-line bg-white">
@@ -33,13 +39,24 @@ export default function Navbar() {
             ))}
           </nav>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="hidden text-sm text-ink-soft sm:inline">{user?.name}</span>
-          <button onClick={logout} className={btnSecondary}>
-            Log out
-          </button>
-        </div>
+
+        <NavLink
+          to="/profile"
+          className={({ isActive }) =>
+            `flex items-center gap-2.5 rounded-full py-1 pl-1 pr-3 transition ${
+              isActive
+                ? "bg-ink/5 ring-2 ring-ink/20"
+                : "hover:bg-paper"
+            }`
+          }
+        >
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-ink text-xs font-bold text-white">
+            {initials}
+          </span>
+          <span className="hidden text-sm font-medium text-ink sm:inline">{user?.name}</span>
+        </NavLink>
       </div>
     </header>
   );
 }
+
