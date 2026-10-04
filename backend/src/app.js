@@ -7,6 +7,7 @@ import summaryRoutes from "./routes/summaryRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
 import reminderRoutes from "./routes/reminderRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
+import cronRoutes from "./routes/cronRoutes.js";
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json({ limit: "100kb" }));
 
 app.get("/health", (req, res) => res.json({ status: "ok" }));
+app.use("/api/internal", cronRoutes);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
