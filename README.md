@@ -1,383 +1,301 @@
 # 💳 Subscription Tracker
 
-A full-stack modern web application designed to help individuals track recurring subscriptions, eliminate unused services, forecast monthly and annual expenses, and automate renewal reminders. Powered by **React 19**, **Node.js / Express 5**, **MongoDB**, and **Google Gemini AI**.
+A full-stack app to track recurring subscriptions, manage renewal dates, analyze spending, get email reminders, and receive AI recommendations for subscriptions you may not be using.
+
+[🚀 Live Demo](https://subscription-tracker-bwynukg39-maneranveer111s-projects.vercel.app) • [📦 GitHub](https://github.com/maneranveer111/subscription-tracker) • [💚 API Health](https://subscription-tracker-api-ut00.onrender.com/health)
 
 ---
 
-## 📑 Table of Contents
+## 📸 Screenshots
 
-- [Overview](#-overview)
-- [Key Features](#-key-features)
-- [Tech Stack](#-tech-stack)
-- [System Architecture](#-system-architecture)
-- [Project Directory Structure](#-project-directory-structure)
-- [Environment Variables](#-environment-variables)
-  - [Backend Configuration](#backend-configuration-backendenv)
-  - [Frontend Configuration](#frontend-configuration-frontendenv)
-- [Getting Started](#-getting-started)
-  - [Prerequisites](#prerequisites)
-  - [1. Clone Repository](#1-clone-repository)
-  - [2. Backend Setup](#2-backend-setup)
-  - [3. Frontend Setup](#3-frontend-setup)
-- [API Reference](#-api-reference)
-  - [Authentication Routes](#authentication-routes-apiauth)
-  - [Subscription Routes](#subscription-routes-apisubscriptions)
-  - [Summary & Analytics Routes](#summary--analytics-routes-apisummary)
-  - [AI Insights Routes](#ai-insights-routes-apiai)
-  - [Reminder Routes](#reminder-routes-apireminder--apiinternal)
-- [AI Optimization Engine](#-ai-optimization-engine)
-- [Automated Email Reminder System](#-automated-email-reminder-system)
-- [Production Deployment](#-production-deployment)
-- [License](#-license)
+**Dashboard** – monthly/yearly spending, upcoming renewals, and cost by category.
 
----
+![SubTracker Dashboard](docs/screenshots/dashboard.png)
 
-## 🌟 Overview
+**Subscription Management** – create, edit, pause, and delete subscriptions.
 
-Recurring software subscriptions, streaming services, gym memberships, and utility bills can easily accumulate into an unmonitored financial drain. 
+![Subscription Management](docs/screenshots/subscriptions.png)
 
-**Subscription Tracker** provides a centralized control hub where users can:
-- View exact monthly and annual commitments at a glance.
-- Receive timely notifications before cards are billed.
-- Analyze spending distributions across custom categories.
-- Leverage **Gemini AI** to audit usage notes and pinpoint underutilized subscriptions that should be canceled or reviewed.
+**AI Insights** – Gemini reads your usage notes and suggests `Keep` / `Review`.
+
+![AI Insights](docs/screenshots/insights.png)
+
+**Add Subscription** – billing cycle, category, renewal date, reminder window, and usage info.
+
+![Add Subscription](docs/screenshots/add-subscription.png)
+
+**Authentication** – email/password and Google Sign-In.
+
+![Login](docs/screenshots/login.png)
+
+![Register](docs/screenshots/register.png)
+
+> The login screenshot is sanitized; no personal account information is included.
 
 ---
 
-## ✨ Key Features
+## ✨ Features
 
-### 📊 Dashboard & Financial Analytics
-- **Live Cost Metrics**: Instant calculation of total monthly and yearly burn rates across all active subscriptions.
-- **Spend by Category**: Visual breakdown powered by **Recharts** highlighting where recurring spend is concentrated.
-- **30-Day Upcoming Renewals**: Chronologically ordered view of upcoming billing dates to prevent unexpected renewals.
+**📊 Dashboard**
+- Total monthly and yearly recurring costs
+- Spend by category (Recharts)
+- Renewals due in the next 30 days
+- Monthly/annual cost conversion for easy comparison
 
-### 📝 Subscription Management
-- **Full CRUD Support**: Add, update, pause/activate, or delete subscriptions with instant UI feedback.
-- **Smart Date Roll-Forward**: Automatic calculation of future renewal cycles (monthly or yearly) with month-end date clamping (e.g. Jan 31 rolling forward to Feb 28).
-- **Customizable Alerts**: Configurable notice windows (0–30 days) per subscription to trigger email notifications before renewal.
-- **Usage Tracking**: Free-form user usage logs per service to inform AI recommendations.
+**📝 Subscription Management**
+- Full CRUD (create, read, update, delete)
+- Activate / pause (paused ones are excluded from spending)
+- Monthly and yearly billing cycles
+- Overdue renewal dates roll forward to the next cycle, including month-end cases (e.g. Jan 31 → shorter months)
+- Custom reminder window (days before renewal)
+- Usage notes for AI analysis
 
-### 🤖 AI-Powered Cancel Recommendations
-- **Gemini 3.8 Flash Integration**: Contextual analysis evaluating subscription cost, frequency, category, and usage notes.
-- **Structured Action Plans**: Returns discrete action directives (`cancel`, `keep`, `review`) with plain-language rationales and projected monthly/annual savings.
-- **Fault-Tolerant AI Client**: Resilient failover with retry logic, rate-limit safeguards, and automatic fallback model cascades (`gemini-3.8-flash` $\rightarrow$ `gemini-3.5-flash-lite` $\rightarrow$ `gemini-flash-latest`).
+**🤖 AI Recommendations (Google Gemini)**
+- Looks at cost, category, frequency, and usage notes
+- Gives `cancel`, `keep`, or `review` with a short explanation
+- Savings are calculated on the server, not by the AI
+- Retry/fallback on supported Gemini failures
+- Per-user cooldown to avoid repeated API calls
 
-### 📧 Automated Notifications & Reminders
-- **Nodemailer + Gmail Integration**: Responsive HTML email templates showing service names, renewal dates, and costs.
-- **Duplicate Prevention**: Tracks `lastReminderFor` timestamps to ensure users are never alerted twice for the same billing cycle.
-- **Dual Triggering Engine**:
-  - Internal daemon: Scheduled daily cron job (`node-cron`) run in the user's local timezone.
-  - External webhook endpoint: `/api/internal/reminders` secured by constant-time secret comparison (`x-cron-secret`) for platforms with sleeping containers (Render/Railway).
-- **Google Sign-In Welcome Emails**: Automatically sends a onboarding email when new users sign in via Google OAuth.
+**📧 Email Reminders**
+- HTML emails via Nodemailer + Gmail SMTP with renewal date and cost
+- Duplicate prevention using `lastReminderFor`
+- Internal `node-cron` scheduler for always-on servers
+- Secure webhook for sleeping cloud servers (e.g. cron-job.org)
 
-### 🔐 Authentication & Profile Management
-- **Dual Auth Strategies**: Email & Password auth with `bcryptjs` (salt factor 10) or Google One-Tap / OAuth 2.0 via `google-auth-library`.
-- **JWT Session Security**: Secure JSON Web Tokens with customizable expiration windows.
-- **User Profile Management**: Update personal info, username, contact number, and notification email.
+**🔐 Authentication**
+- Email/password registration and login (`bcryptjs` hashing)
+- JWT auth with configurable expiry
+- Google OAuth / Sign-In
+- Protected routes and profile management
+
+---
+
+## 💡 Engineering Highlights
+
+- **Backend:** Express 5 REST API, split into routes / controllers / services / models / middleware / utils, Zod validation, centralized async error handling, Mongoose models, environment-based config
+- **AI:** server-side Gemini calls, structured output, server-side money math, retry/fallback, per-user cooldown, usage notes treated as untrusted input (prompt-injection aware)
+- **Automation:** background reminders, renewal roll-forward, duplicate prevention, internal cron + secure external webhook
+- **Deployment:** React on Vercel, Express on Render, MongoDB Atlas, external cron, env-based production config
 
 ---
 
 ## 🛠️ Tech Stack
 
-### Frontend
-- **Framework**: [React 19](https://react.dev/) + [Vite 8](https://vitejs.dev/)
-- **Routing**: [React Router v7](https://reactrouter.com/)
-- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/) (`@tailwindcss/vite`)
-- **Data Visualization**: [Recharts](https://recharts.org/)
-- **HTTP Client**: [Axios](https://axios-http.com/)
-- **Google OAuth**: `@react-oauth/google`
-- **Typography**: DM Sans & Bricolage Grotesque
-
-### Backend
-- **Runtime & Framework**: [Node.js](https://nodejs.org/) (ES Modules) & [Express 5](https://expressjs.com/)
-- **Database**: [MongoDB](https://www.mongodb.com/) via [Mongoose 9](https://mongoosejs.com/)
-- **AI Engine**: [Google Gemini REST API](https://ai.google.dev/)
-- **Schema Validation**: [Zod](https://zod.dev/)
-- **Email Delivery**: [Nodemailer](https://nodemailer.com/)
-- **Cron Scheduling**: [node-cron](https://www.npmjs.com/package/node-cron)
-- **Security**: [JSON Web Token (jsonwebtoken)](https://jwt.io/), [bcryptjs](https://www.npmjs.com/package/bcryptjs), `cors`, `google-auth-library`
+| Layer | Technology |
+|---|---|
+| Frontend | React 19, Vite 8, Tailwind CSS v4, React Router v7, Recharts, Axios, `@react-oauth/google`, DM Sans, Bricolage Grotesque |
+| Backend | Node.js, Express 5, Mongoose 9, Zod, JWT, bcryptjs, google-auth-library, CORS |
+| Database | MongoDB Atlas |
+| AI | Google Gemini API |
+| Email | Nodemailer + Gmail SMTP |
+| Scheduling | node-cron + external cron service |
+| Deployment | Vercel (frontend) + Render (backend) |
+| Version Control | Git + GitHub |
 
 ---
 
-## 🏛️ System Architecture
+## 🏗️ Architecture
 
-```mermaid
-flowchart TD
-    subgraph Client["Frontend (React 19 + Vite + Tailwind v4)"]
-        UI[Pages: Dashboard / Subscriptions / Insights / Profile]
-        AuthContext[Auth Context & Token Storage]
-        AxiosClient[Axios API Client]
-        UI --> AuthContext
-        UI --> AxiosClient
-    end
-
-    subgraph Server["Backend (Node.js + Express 5)"]
-        Router[Express Router & Middlewares]
-        AuthMiddleware[JWT / Google Auth Middleware]
-        ZodValidator[Zod Schema Validation]
-        
-        subgraph Controllers
-            AuthCtrl[authController / googleAuthController]
-            SubCtrl[subscriptionController]
-            SumCtrl[summaryController]
-            AiCtrl[aiController]
-            RemCtrl[reminderController / cronController]
-        end
-
-        subgraph Services
-            GeminiSvc[geminiService (Google Gemini API)]
-            EmailSvc[emailService (Nodemailer)]
-            RemindSvc[reminderService]
-            CronJob[node-cron Scheduler]
-        end
-    end
-
-    subgraph Database["Database & External APIs"]
-        MongoDB[(MongoDB Atlas)]
-        GeminiAPI[Google Gemini 3.8 Flash]
-        GmailSMTP[Gmail SMTP Server]
-        GoogleOAuthAPI[Google OAuth 2.0]
-    end
-
-    AxiosClient -->|REST API Requests| Router
-    Router --> AuthMiddleware
-    Router --> ZodValidator
-    
-    AuthMiddleware --> AuthCtrl
-    ZodValidator --> SubCtrl
-    
-    AuthCtrl --> MongoDB
-    AuthCtrl -.->|Verify Token| GoogleOAuthAPI
-    SubCtrl --> MongoDB
-    SumCtrl --> MongoDB
-    
-    AiCtrl --> GeminiSvc
-    GeminiSvc -->|REST / JSON| GeminiAPI
-    
-    RemCtrl --> RemindSvc
-    CronJob --> RemindSvc
-    RemindSvc --> MongoDB
-    RemindSvc --> EmailSvc
-    EmailSvc -->|SMTP TLS| GmailSMTP
+```text
+                    HTTPS
+                      │
+                      ▼
+         ┌─────────────────────────┐
+         │   React + Vite Frontend │
+         │         Vercel          │
+         └────────────┬────────────┘
+                      │ REST API
+                      ▼
+         ┌─────────────────────────┐
+         │    Node + Express API   │
+         │         Render          │
+         └──────┬──────┬──────┬───┘
+                │      │      │
+        ┌───────┘      │      └────────┐
+        ▼              ▼               ▼
+ ┌─────────────┐ ┌────────────┐ ┌─────────────┐
+ │ MongoDB     │ │ Gemini API │ │ Gmail SMTP  │
+ │ Atlas       │ │            │ │             │
+ └─────────────┘ └────────────┘ └─────────────┘
+                       ▲
+                       │
+              ┌────────┴────────┐
+              │ External Cron   │
+              │ cron-job.org    │
+              └─────────────────┘
 ```
 
+Google OAuth is also used by the backend to verify Google sign-in tokens.
+
 ---
 
-## 📁 Project Directory Structure
+## 📁 Project Structure
 
 ```text
 subscription-tracker/
 ├── backend/
 │   ├── src/
-│   │   ├── config/
-│   │   │   ├── db.js                 # MongoDB connection handler
-│   │   │   └── env.js                # Environment variable loader & verification
-│   │   ├── controllers/
-│   │   │   ├── aiController.js       # AI cancel recommendation endpoint logic
-│   │   │   ├── authController.js     # User registration, login, profile endpoints
-│   │   │   ├── cronController.js     # External secure cron trigger
-│   │   │   ├── googleAuthController.js # Google OAuth ID token verification
-│   │   │   ├── reminderController.js # Manual reminder test controller
-│   │   │   ├── subscriptionController.js # Subscriptions CRUD operations
-│   │   │   └── summaryController.js  # Dashboard aggregations & category sums
-│   │   ├── jobs/
-│   │   │   └── reminderJob.js        # Internal node-cron background task
-│   │   ├── middleware/
-│   │   │   ├── authMiddleware.js     # JWT bearer token verification
-│   │   │   ├── errorHandler.js       # Centralized 404 & error handlers
-│   │   │   └── validate.js           # Generic Zod middleware validator
-│   │   ├── models/
-│   │   │   ├── Subscription.js       # Subscription Mongoose schema
-│   │   │   └── User.js               # User Mongoose schema
-│   │   ├── routes/
-│   │   │   ├── aiRoutes.js           # /api/ai routes
-│   │   │   ├── authRoutes.js         # /api/auth routes
-│   │   │   ├── cronRoutes.js         # /api/internal routes
-│   │   │   ├── reminderRoutes.js     # /api/reminders routes
-│   │   │   ├── subscriptionRoutes.js # /api/subscriptions routes
-│   │   │   └── summaryRoutes.js      # /api/summary routes
-│   │   ├── services/
-│   │   │   ├── emailService.js       # Nodemailer transport & HTML templates
-│   │   │   ├── geminiService.js      # Gemini API prompt builder & JSON parser
-│   │   │   └── reminderService.js    # Renewal check & email dispatching
-│   │   ├── utils/
-│   │   │   ├── asyncHandler.js       # Express async route wrapper
-│   │   │   ├── costUtils.js          # Monthly equivalent & rounding helpers
-│   │   │   └── dateUtils.js          # Day calculation & renewal roll-forward
-│   │   ├── validators/
-│   │   │   ├── authSchemas.js        # Zod registration/login schemas
-│   │   │   └── subscriptionSchemas.js# Zod subscription CRUD validation schemas
-│   │   ├── app.js                    # Express application configuration
-│   │   └── server.js                 # HTTP listener & service bootstrapper
+│   │   ├── config/       # db.js, env.js
+│   │   ├── controllers/  # ai, auth, cron, googleAuth, reminder, subscription, summary
+│   │   ├── jobs/         # reminderJob.js
+│   │   ├── middleware/   # authMiddleware, errorHandler, validate
+│   │   ├── models/       # Subscription.js, User.js
+│   │   ├── routes/       # ai, auth, cron, reminder, subscription, summary
+│   │   ├── services/     # emailService, geminiService, reminderService
+│   │   ├── utils/        # asyncHandler, costUtils, dateUtils
+│   │   ├── validators/   # authSchemas, subscriptionSchemas
+│   │   ├── app.js
+│   │   └── server.js
 │   ├── .env.example
 │   └── package.json
 │
 ├── frontend/
-│   ├── public/                       # Static public assets
-│   ├── src/
-│   │   ├── api/
-│   │   │   ├── aiApi.js              # AI suggestions HTTP requests
-│   │   │   ├── authApi.js            # Authentication HTTP requests
-│   │   │   ├── axios.js              # Configured Axios instance with interceptors
-│   │   │   └── subscriptionApi.js    # Subscription & summary HTTP requests
-│   │   ├── components/
-│   │   │   ├── AiSuggestions.jsx     # AI recommendation card & savings display
-│   │   │   ├── AuthHero.jsx          # Illustrated hero section for auth screens
-│   │   │   ├── CostSummary.jsx       # Large monthly/annual expense headline
-│   │   │   ├── Navbar.jsx            # Top navigation bar with active links
-│   │   │   ├── ProtectedRoute.jsx    # Route guard requiring authenticated user
-│   │   │   ├── RenewalList.jsx       # 30-day upcoming renewals list
-│   │   │   ├── SpendChart.jsx        # Recharts responsive spending bar chart
-│   │   │   ├── Spinner.jsx           # Clean loading spinner
-│   │   │   ├── SubscriptionCard.jsx  # Individual subscription item card
-│   │   │   └── SubscriptionForm.jsx  # Create / edit subscription modal form
-│   │   ├── context/
-│   │   │   └── AuthContext.jsx       # User authentication state provider
-│   │   ├── pages/
-│   │   │   ├── Dashboard.jsx         # Main analytical dashboard
-│   │   │   ├── Insights.jsx          # AI advice & test reminder triggers
-│   │   │   ├── Login.jsx             # User sign-in screen
-│   │   │   ├── Profile.jsx           # User profile and account settings
-│   │   │   ├── Register.jsx          # New user registration screen
-│   │   │   └── Subscriptions.jsx     # Subscriptions management & list view
-│   │   ├── utils/
-│   │   │   ├── constants.js          # Category lists & chart colors
-│   │   │   ├── formatters.js         # Currency and date formatters
-│   │   │   └── ui.js                 # Reusable Tailwind class tokens
-│   │   ├── App.jsx                   # Route definition & layout wrapper
-│   │   ├── index.css                 # Tailwind CSS v4 design tokens
-│   │   └── main.jsx                  # React application entry point
+│   ├── public/
+│   ├── src/              # api, components, context, pages, utils, App.jsx, index.css, main.jsx
 │   ├── .env.example
 │   ├── package.json
-│   ├── vercel.json                   # SPA routing rewrite rule for Vercel
-│   └── vite.config.js                # Vite build configuration
+│   ├── vercel.json
+│   └── vite.config.js
 │
+├── docs/screenshots/     # dashboard, subscriptions, insights, add-subscription, login, register
 └── README.md
 ```
 
 ---
 
-## ⚙️ Environment Variables
-
-Create `.env` files in both `backend/` and `frontend/` directories following the specifications below.
-
-### Backend Configuration (`backend/.env`)
-
-| Variable | Required | Default | Description |
-| :--- | :---: | :---: | :--- |
-| `NODE_ENV` | No | `development` | Environment mode (`development` or `production`). |
-| `PORT` | No | `5000` | Port for the Express server to listen on. |
-| `MONGO_URI` | **Yes** | — | MongoDB connection string (e.g. MongoDB Atlas cluster URI). |
-| `JWT_SECRET` | **Yes** | — | Secret string used to sign JSON Web Tokens (`openssl rand -hex 32`). |
-| `JWT_EXPIRES_IN`| No | `7d` | Lifetime of issued authentication tokens. |
-| `CLIENT_URL` | No | `http://localhost:5173`| Allowed CORS origins (comma-separated for multiple origins). |
-| `GEMINI_API_KEY`| No | — | Google Gemini API key for AI cancel suggestions. |
-| `GEMINI_MODEL` | No | `gemini-3.8-flash` | Primary Gemini model identifier. |
-| `EMAIL_USER` | No | — | Gmail address for sending renewal notification emails. |
-| `EMAIL_PASS` | No | — | Gmail 16-character **App Password** (not personal password). |
-| `GOOGLE_CLIENT_ID`| No | — | Google OAuth 2.0 Web Client ID for Google Sign-In. |
-| `CURRENCY` | No | `INR` | ISO 4217 Currency code (e.g., `INR`, `USD`, `EUR`). |
-| `TIMEZONE` | No | `Asia/Kolkata` | IANA Timezone string for scheduling notifications. |
-| `REMINDER_CRON`| No | `0 9 * * *` | Cron schedule expression (defaults to daily at 09:00 AM). |
-| `CRON_SECRET` | No | — | Shared secret token passed in `x-cron-secret` for webhook cron. |
-
-### Frontend Configuration (`frontend/.env`)
-
-| Variable | Required | Default | Description |
-| :--- | :---: | :---: | :--- |
-| `VITE_API_URL` | **Yes** | `http://localhost:5000/api` | Base API endpoint URL (must end with `/api`). |
-| `VITE_CURRENCY`| No | `INR` | Currency display format code (e.g. `INR`, `USD`). |
-| `VITE_GOOGLE_CLIENT_ID` | No | — | Google OAuth Client ID (must match backend). |
-
----
-
 ## 🚀 Getting Started
 
-### Prerequisites
-- [Node.js](https://nodejs.org/) (version 18.0.0 or higher)
-- [npm](https://www.npmjs.com/) (version 9 or higher)
-- [MongoDB](https://www.mongodb.com/) instance (local or free MongoDB Atlas cluster)
-- *(Optional)* [Google Cloud Console](https://console.cloud.google.com/) OAuth Client ID
-- *(Optional)* [Google AI Studio](https://aistudio.google.com/) API Key for Gemini
+**Prerequisites**
+- Node.js 18+ and npm 9+
+- MongoDB (local or Atlas)
+- Optional: Google OAuth Client ID, Gemini API key
+- Optional (needed for email reminders): Gmail App Password
 
-### 1. Clone Repository
+**1. Clone**
 
 ```bash
 git clone https://github.com/maneranveer111/subscription-tracker.git
 cd subscription-tracker
 ```
 
-### 2. Backend Setup
+**2. Backend**
 
 ```bash
-# Navigate to backend directory
 cd backend
-
-# Install dependencies
 npm install
-
-# Create environment configuration
 cp .env.example .env
-# Edit .env and supply your MONGO_URI, JWT_SECRET, and optional keys
+```
 
-# Start development server with nodemon
+Set at least:
+
+```env
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_secure_jwt_secret
+```
+
+Run it (at `http://localhost:5000`):
+
+```bash
 npm run dev
 ```
-The backend server starts listening at `http://localhost:5000`. Test the health check endpoint:
+
+Check it's working:
+
 ```bash
 curl http://localhost:5000/health
-# Response: {"status":"ok"}
+# {"status": "ok"}
 ```
 
-### 3. Frontend Setup
-
-Open a new terminal window:
+**3. Frontend** (in a new terminal)
 
 ```bash
-# Navigate to frontend directory
 cd frontend
-
-# Install dependencies
 npm install
-
-# Create environment configuration
 cp .env.example .env
-# Verify VITE_API_URL is set to http://localhost:5000/api
+```
 
-# Start Vite dev server
+Set:
+
+```env
+VITE_API_URL=http://localhost:5000/api
+```
+
+Run it (at `http://localhost:5173`):
+
+```bash
 npm run dev
 ```
-Open your browser and navigate to `http://localhost:5173`.
+
+---
+
+## ⚙️ Environment Variables
+
+Create `.env` files in both `backend/` and `frontend/`.
+
+### Backend
+
+| Variable | Required | Default | Description |
+|---|:---:|---|---|
+| `NODE_ENV` | No | `development` | App environment |
+| `PORT` | No | `5000` | Server port (cloud platforms may set it) |
+| `MONGO_URI` | **Yes** | — | MongoDB connection string |
+| `JWT_SECRET` | **Yes** | — | Secret for signing JWTs |
+| `JWT_EXPIRES_IN` | No | `7d` | JWT expiry |
+| `CLIENT_URL` | No | `http://localhost:5173` | Allowed CORS origins |
+| `GEMINI_API_KEY` | No | — | Gemini API key |
+| `GEMINI_MODEL` | No | Configured model | Gemini model identifier |
+| `EMAIL_USER` | No | — | Gmail sender address |
+| `EMAIL_PASS` | No | — | Gmail App Password |
+| `GOOGLE_CLIENT_ID` | No | — | Google OAuth Web Client ID |
+| `CURRENCY` | No | `INR` | Currency code |
+| `TIMEZONE` | No | `Asia/Kolkata` | Reminder timezone |
+| `REMINDER_CRON` | No | `0 9 * * *` | Internal reminder schedule |
+| `CRON_SECRET` | No | — | Secret for the external cron webhook |
+
+### Frontend
+
+| Variable | Required | Default | Description |
+|---|:---:|---|---|
+| `VITE_API_URL` | **Yes** | `http://localhost:5000/api` | Backend API base URL |
+| `VITE_CURRENCY` | No | `INR` | Currency display code |
+| `VITE_GOOGLE_CLIENT_ID` | No | — | Google OAuth Client ID |
+
+> **Security:** Never commit `.env` files, JWT secrets, API keys, Gmail App Passwords, or cron secrets.
 
 ---
 
 ## 📡 API Reference
 
-All protected endpoints require the following header:
+Protected endpoints need this header:
+
 ```http
 Authorization: Bearer <your_jwt_token>
 ```
 
-### Authentication Routes (`/api/auth`)
-
 | Method | Endpoint | Access | Description |
-| :--- | :--- | :---: | :--- |
-| `POST` | `/register` | Public | Register a new account (`name`, `email`, `password`). |
-| `POST` | `/login` | Public | Authenticate user with credentials (`email`, `password`). |
-| `POST` | `/google` | Public | Verify Google OAuth token (`credential`) and authenticate. |
-| `GET` | `/me` | Protected | Retrieve the authenticated user's profile details. |
-| `PUT` | `/profile` | Protected | Update profile information (`name`, `username`, `email`, `phone`). |
+|---|---|:---:|---|
+| `POST` | `/api/auth/register` | Public | Register a new account |
+| `POST` | `/api/auth/login` | Public | Log in with email/password |
+| `POST` | `/api/auth/google` | Public | Log in with a Google credential |
+| `GET` | `/api/auth/me` | Protected | Get your profile |
+| `PUT` | `/api/auth/profile` | Protected | Update your profile |
+| `GET` | `/api/subscriptions` | Protected | List your subscriptions |
+| `POST` | `/api/subscriptions` | Protected | Create a subscription |
+| `PUT` | `/api/subscriptions/:id` | Protected | Update a subscription |
+| `DELETE` | `/api/subscriptions/:id` | Protected | Delete a subscription |
+| `GET` | `/api/summary` | Protected | Financial metrics, category totals, upcoming renewals |
+| `POST` | `/api/ai/cancel-suggestions` | Protected | Generate AI recommendations |
+| `POST` | `/api/reminders/run` | Protected | Trigger a reminder test for the logged-in user |
+| `POST` | `/api/internal/reminders` | Secret header | Run scheduled reminder processing |
 
-### Subscription Routes (`/api/subscriptions`)
+The internal cron endpoint requires:
 
-| Method | Endpoint | Access | Description |
-| :--- | :--- | :---: | :--- |
-| `GET` | `/` | Protected | List all subscriptions belonging to the user. |
-| `POST` | `/` | Protected | Create a new subscription record. |
-| `PUT` | `/:id` | Protected | Update an existing subscription by ID. |
-| `DELETE` | `/:id` | Protected | Remove a subscription record permanently. |
+```http
+X-Cron-Secret: <CRON_SECRET>
+```
 
-#### Subscription Schema Parameters
+**Example subscription body:**
 
 ```json
 {
@@ -392,82 +310,143 @@ Authorization: Bearer <your_jwt_token>
 }
 ```
 
-### Summary & Analytics Routes (`/api/summary`)
+---
 
-| Method | Endpoint | Access | Description |
-| :--- | :--- | :---: | :--- |
-| `GET` | `/` | Protected | Fetch aggregate financial metrics, category sums, and renewals within 30 days. |
+## 🧠 How the AI Works
 
-### AI Insights Routes (`/api/ai`)
+The server keeps all money calculations to itself and uses Gemini only for reasoning about usage.
 
-| Method | Endpoint | Access | Description |
-| :--- | :--- | :---: | :--- |
-| `POST` | `/cancel-suggestions` | Protected | Analyze active subscriptions and generate action recommendations via Gemini AI. |
+```text
+Subscriptions (usage notes + cost + cycle + category)
+        ↓
+Server-side validation
+        ↓
+Gemini analysis → cancel / keep / review
+        ↓
+Server-side savings calculation
+        ↓
+Structured recommendations
+```
 
-### Reminder Routes (`/api/reminders` & `/api/internal`)
-
-| Method | Endpoint | Access | Description |
-| :--- | :--- | :---: | :--- |
-| `POST` | `/api/reminders/run` | Protected | Triggers an immediate test email reminder for the logged-in user. |
-| `POST` | `/api/internal/reminders` | Header Secret | Endpoint for external cron triggers (`x-cron-secret: <CRON_SECRET>`). |
+- Usage notes are treated as untrusted input
+- Output is parsed and validated
+- Retry/fallback handles supported API failures
+- A per-user cooldown reduces repeated requests and quota usage
 
 ---
 
-## 🧠 AI Optimization Engine
+## ⏰ Email Reminders
 
-The AI recommendation module runs on **Google Gemini 3.8 Flash**. It inspects user-provided usage notes alongside financial metrics without compromising security:
+There are two ways to run reminders.
 
-1. **Prompt Sanitization**: User usage notes are treated strictly as read-only data within system boundary instructions to prevent prompt injection.
-2. **Deterministic Financial Computations**: While Gemini assigns the action (`cancel`, `keep`, `review`) and rationale, all cost computations and savings tallies are strictly computed server-side to eliminate AI hallucination.
-3. **Smart Failover**: If Gemini returns a `503 Service Unavailable` or `429 Rate Limit`, the client automatically retries and cascades through fallback models (`gemini-3.5-flash-lite`, `gemini-flash-latest`).
-4. **Per-User Cooldown**: A server-side 10-second debounce prevents rapid quota exhaustion.
+**Option A – Internal `node-cron`** (always-on servers)
 
----
+Runs `processReminders()` on the schedule `0 9 * * *` in `Asia/Kolkata`. It finds due subscriptions, checks the reminder window, skips duplicates, and sends the email.
 
-## ⏰ Automated Email Reminder System
+**Option B – External cron webhook** (sleeping/free-tier servers)
 
-The application offers two reliable options for recurring reminder execution:
+An external service calls the webhook, which runs the same `processReminders()` flow:
 
-### Option A: Internal node-cron (Continuous Server)
-When running on dedicated instances, VPS, or Docker containers that do not sleep, the internal job boots automatically with `server.js` and schedules tasks based on `REMINDER_CRON` (e.g. `0 9 * * *` at `Asia/Kolkata`).
+```bash
+curl -X POST https://your-backend.onrender.com/api/internal/reminders \
+  -H "X-Cron-Secret: your_random_secret"
+```
 
-### Option B: External Webhook Cron (Serverless / Sleeping Instances)
-When deployed to free-tier cloud providers like Render or Railway where containers sleep when inactive:
-1. Set `CRON_SECRET=your_random_secret_string` in `backend/.env`.
-2. Configure a free scheduled cron ping (such as [cron-job.org](https://cron-job.org/) or GitHub Actions) to run daily:
-   ```bash
-   curl -X POST https://your-backend.onrender.com/api/internal/reminders \
-     -H "x-cron-secret: your_random_secret_string"
-   ```
+The endpoint uses a shared secret with constant-time comparison.
 
 ---
 
-## 🚢 Production Deployment
+## ☁️ Deployment
 
-### Frontend (Vercel)
-1. Push your repository to GitHub.
-2. Import the project into [Vercel](https://vercel.com/) and set the root directory to `frontend`.
-3. Add the required environment variables:
-   - `VITE_API_URL`: Your production backend URL (e.g., `https://api.yourdomain.com/api`).
-   - `VITE_CURRENCY`: Preferred currency code (e.g., `INR` or `USD`).
-   - `VITE_GOOGLE_CLIENT_ID`: Your Google OAuth Client ID.
-4. The included `frontend/vercel.json` automatically ensures all client-side routes redirect properly to `index.html`.
+| Component | Platform |
+|---|---|
+| Frontend | Vercel |
+| Backend | Render |
+| Database | MongoDB Atlas |
+| AI | Google Gemini API |
+| Email | Gmail SMTP |
+| Scheduled reminders | External cron service |
 
-### Backend (Render / Railway / VPS)
-1. Set the root directory to `backend`.
-2. Configure the build command: `npm install`.
-3. Configure the start command: `node src/server.js`.
-4. Supply all required production environment variables:
-   - `NODE_ENV=production`
-   - `MONGO_URI`
-   - `JWT_SECRET`
-   - `CLIENT_URL`: Your Vercel frontend URL (e.g. `https://your-app.vercel.app`).
-   - `GEMINI_API_KEY`
-   - `EMAIL_USER` & `EMAIL_PASS`
-   - `GOOGLE_CLIENT_ID`
+**Frontend (Vercel):** set root directory to `frontend` and add:
+
+```env
+VITE_API_URL=https://your-backend-url/api
+VITE_CURRENCY=INR
+VITE_GOOGLE_CLIENT_ID=your_google_client_id
+```
+
+**Backend (Render):**
+
+```text
+Root Directory: backend
+Build Command: npm install
+Start Command: npm start
+```
+
+Add the production environment variables listed above.
+
+**Google OAuth:** add your deployed frontend to the authorized JavaScript origins, and keep the local one if needed:
+
+```text
+https://your-app.vercel.app
+http://localhost:5173
+```
+
+---
+
+## 🧪 Testing
+
+These flows were tested manually: registration, email/password login, Google auth, protected routes, subscription CRUD, dashboard and renewal calculations, AI recommendations, reminder triggering and automation, frontend/backend communication in production, API health checks, and environment configuration.
+
+```bash
+curl https://subscription-tracker-api-ut00.onrender.com/health
+# {"status": "ok"}
+```
+
+> Automated unit and integration tests are planned.
+
+---
+
+## 🔐 Security
+
+- Password hashing with `bcryptjs`
+- JWT authentication and protected routes
+- Google OAuth token verification
+- Zod input validation and CORS configuration
+- Secrets kept in environment variables
+- Secret-protected cron endpoint with constant-time comparison
+- Server-side financial calculations
+- AI request cooldown
+- Centralized error handling
+
+Never expose `MONGO_URI`, `JWT_SECRET`, `GEMINI_API_KEY`, `EMAIL_PASS`, `CRON_SECRET`, or the Google OAuth Client Secret. Only the Google OAuth **Client ID** belongs in the frontend.
+
+---
+
+## 🔮 Future Improvements
+
+- Automated unit and integration tests
+- GitHub Actions CI/CD
+- Docker containerization
+- Redis caching and rate limiting
+- More detailed spending trends
+- Push/browser notifications
+- Subscription sharing for families/teams
+- More advanced AI usage analysis
+- Better logging and observability
+- Production monitoring and alerting
+- Dedicated background job infrastructure
+
+---
+
+## 📌 Why This Project
+
+Built to practice and show: full-stack development, REST API design, authentication and authorization, MongoDB data modeling, input validation, third-party API integration, AI app development, background jobs, email automation, cloud deployment, and production debugging.
 
 ---
 
 ## 📄 License
 
-This project is open-source and licensed under the [ISC License](LICENSE).
+Open-source under the [ISC License](LICENSE).
+
+<p align="center">Built with ❤️ using React, Node.js, MongoDB, and Gemini AI.</p>
