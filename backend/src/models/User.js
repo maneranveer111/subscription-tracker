@@ -7,7 +7,6 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
       maxlength: 30,
-      sparse: true,
       default: null,
     },
     email: {
@@ -22,10 +21,16 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: false, select: false },
     // Set when the user signs in with Google; null for email/password accounts
     googleId: { type: String, default: null, select: false },
-    // Track first sign-in to send welcome email once
-    isNewUser: { type: Boolean, default: true },
+    // Only the Google sign-up path sets this to true, to send the welcome email once
+    isNewUser: { type: Boolean, default: false },
   },
   { timestamps: true }
+);
+
+// Usernames must be unique, but most users have none (null), so only index real strings
+userSchema.index(
+  { username: 1 },
+  { unique: true, partialFilterExpression: { username: { $type: "string" } } }
 );
 
 export default mongoose.model("User", userSchema);

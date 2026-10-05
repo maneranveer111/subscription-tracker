@@ -60,9 +60,13 @@ export const googleSignIn = asyncHandler(async (req, res) => {
     });
     isNew = true;
   } else if (!user.googleId) {
-    // Existing email/password user signing in with Google for the first time
-    user.googleId = googleId;
-    await user.save();
+    // Existing email/password user signing in with Google for the first time.
+    // The old password is removed: email isn't verified at signup, so someone else
+    // could have registered this address first and would otherwise keep access.
+    await User.updateOne(
+      { _id: user._id },
+      { $set: { googleId }, $unset: { password: 1 } }
+    );
   }
 
   // Send welcome email on first sign-in (fire-and-forget, don't block login)

@@ -1,15 +1,15 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "REST API for Subscription Tracker",
+  "main": "src/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test",
     "dev": "nodemon src/server.js",
     "start": "node src/server.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "Mane Ranveer",
   "license": "ISC",
   "type": "module",
   "dependencies": {
@@ -17,11 +17,12 @@
     "cors": "^2.8.6",
     "dotenv": "^18.0.5",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
     "google-auth-library": "^11.1.0",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.10.4",
     "node-cron": "^4.6.0",
-    "nodemailer": "^10.0.13",
     "zod": "^4.6.5"
   },
   "devDependencies": {

@@ -4,6 +4,9 @@ import User from "../models/User.js";
 import { env } from "../config/env.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
+// Used when the email doesn't exist, so login takes the same time either way
+const DUMMY_HASH = bcrypt.hashSync("not-a-real-password", 10);
+
 const signToken = (id) =>
   jwt.sign({ id: String(id) }, env.jwtSecret, { expiresIn: env.jwtExpiresIn });
 
@@ -32,7 +35,17 @@ export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
   const user = await User.findOne({ email }).select("+password");
-  const valid = user && (await bcrypt.compare(password, user.password));
+
+  // Google-created accounts have no password; comparing against undefined would crash
+  if (user && !user.password) {
+    return res
+      .status(401)
+      .json({ message: "This account uses Google sign-in. Please use the Google button." });
+  }
+
+  // Compare even when the user doesn't exist, so response time doesn't reveal which emails are registered
+  const matches = await bcrypt.compare(password, user?.password || DUMMY_HASH);
+  const valid = Boolean(user) && matches;
 
   // Same message for both cases so attackers can't tell which emails exist
   if (!valid) {

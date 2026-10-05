@@ -3,15 +3,19 @@ import { register, login, me, updateProfile } from "../controllers/authControlle
 import { googleSignIn } from "../controllers/googleAuthController.js";
 import { validate } from "../middleware/validate.js";
 import { protect } from "../middleware/authMiddleware.js";
-import { registerSchema, loginSchema } from "../validators/authSchemas.js";
+import {
+  registerSchema,
+  loginSchema,
+  googleSchema,
+  updateProfileSchema,
+} from "../validators/authSchemas.js";
 
 const router = Router();
 
 router.post("/register", validate(registerSchema), register);
 router.post("/login", validate(loginSchema), login);
-router.post("/google", googleSignIn);
+router.post("/google", validate(googleSchema), googleSignIn);
 router.get("/me", protect, me);
-router.put("/profile", protect, updateProfile);
+router.put("/profile", protect, validate(updateProfileSchema), updateProfile);
 
 export default router;
-

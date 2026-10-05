@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { updateProfile } from "../api/authApi";
@@ -25,17 +25,6 @@ export default function Profile() {
     form.username !== (user?.username || "") ||
     form.email !== (user?.email || "") ||
     form.phone !== (user?.phone || "");
-
-  useEffect(() => {
-    if (user && !dirty) {
-      setForm({
-        name: user.name || "",
-        username: user.username || "",
-        email: user.email || "",
-        phone: user.phone || "",
-      });
-    }
-  }, [user]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });

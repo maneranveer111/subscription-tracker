@@ -1,8 +1,12 @@
 # 💳 Subscription Tracker
 
+![CI](https://github.com/maneranveer111/subscription-tracker/actions/workflows/ci.yml/badge.svg)
+
 A full-stack app to track recurring subscriptions, manage renewal dates, analyze spending, get email reminders, and receive AI recommendations for subscriptions you may not be using.
 
 [🚀 Live Demo](https://subscription-tracker-pink-eight.vercel.app) • [📦 GitHub](https://github.com/maneranveer111/subscription-tracker) • [💚 API Health](https://subscription-tracker-api-ut00.onrender.com/health)
+
+> The backend runs on Render's free tier, so the first request after a quiet period can take up to a minute while the server wakes up.
 
 ---
 
@@ -58,7 +62,7 @@ A full-stack app to track recurring subscriptions, manage renewal dates, analyze
 - Per-user cooldown to avoid repeated API calls
 
 **📧 Email Reminders**
-- HTML emails via Nodemailer + Gmail SMTP with renewal date and cost
+- HTML emails sent through Brevo's transactional email API (over HTTPS) with renewal date and cost
 - Duplicate prevention using `lastReminderFor`
 - Internal `node-cron` scheduler for always-on servers
 - Secure webhook for sleeping cloud servers (e.g. cron-job.org)
@@ -77,6 +81,8 @@ A full-stack app to track recurring subscriptions, manage renewal dates, analyze
 - **AI:** server-side Gemini calls, structured output, server-side money math, retry/fallback, per-user cooldown, usage notes treated as untrusted input (prompt-injection aware)
 - **Automation:** background reminders, renewal roll-forward, duplicate prevention, internal cron + secure external webhook
 - **Deployment:** React on Vercel, Express on Render, MongoDB Atlas, external cron, env-based production config
+- **Quality:** 24 automated tests (Node's built-in test runner) and a GitHub Actions pipeline that runs tests, lint and build on every push
+- **Production debugging:** traced failing reminder emails in the Render logs to the free tier blocking outbound SMTP ports, and moved email to an HTTPS API
 
 ---
 
@@ -88,7 +94,7 @@ A full-stack app to track recurring subscriptions, manage renewal dates, analyze
 | Backend | Node.js, Express 5, Mongoose 9, Zod, JWT, bcryptjs, google-auth-library, CORS |
 | Database | MongoDB Atlas |
 | AI | Google Gemini API |
-| Email | Nodemailer + Gmail SMTP |
+| Email | Brevo transactional email API (HTTPS) |
 | Scheduling | node-cron + external cron service |
 | Deployment | Vercel (frontend) + Render (backend) |
 | Version Control | Git + GitHub |
@@ -115,8 +121,8 @@ A full-stack app to track recurring subscriptions, manage renewal dates, analyze
         ┌───────┘      │      └────────┐
         ▼              ▼               ▼
  ┌─────────────┐ ┌────────────┐ ┌─────────────┐
- │ MongoDB     │ │ Gemini API │ │ Gmail SMTP  │
- │ Atlas       │ │            │ │             │
+ │ MongoDB     │ │ Gemini API │ │ Brevo Email │
+ │ Atlas       │ │            │ │ API (HTTPS) │
  └─────────────┘ └────────────┘ └─────────────┘
                        ▲
                        │
@@ -134,6 +140,7 @@ Google OAuth is also used by the backend to verify Google sign-in tokens.
 
 ```text
 subscription-tracker/
+├── .github/workflows/ci.yml   # tests + lint + build on every push
 ├── backend/
 │   ├── src/
 │   │   ├── config/       # db.js, env.js
@@ -147,6 +154,7 @@ subscription-tracker/
 │   │   ├── validators/   # authSchemas, subscriptionSchemas
 │   │   ├── app.js
 │   │   └── server.js
+│   ├── tests/            # node:test unit and API tests
 │   ├── .env.example
 │   └── package.json
 │
@@ -158,6 +166,7 @@ subscription-tracker/
 │   ├── vercel.json
 │   └── vite.config.js
 │
+├── LICENSE
 ├── docs/screenshots/     # dashboard, subscriptions, insights, add-subscription, login, register
 └── README.md
 ```
@@ -170,7 +179,7 @@ subscription-tracker/
 - Node.js 18+ and npm 9+
 - MongoDB (local or Atlas)
 - Optional: Google OAuth Client ID, Gemini API key
-- Optional (needed for email reminders): Gmail App Password
+- Optional (needed for email reminders): a free Brevo account with an API key and a verified sender address
 
 **1. Clone**
 
@@ -245,8 +254,8 @@ Create `.env` files in both `backend/` and `frontend/`.
 | `CLIENT_URL` | No | `http://localhost:5173` | Allowed CORS origins |
 | `GEMINI_API_KEY` | No | — | Gemini API key |
 | `GEMINI_MODEL` | No | Configured model | Gemini model identifier |
-| `EMAIL_USER` | No | — | Gmail sender address |
-| `EMAIL_PASS` | No | — | Gmail App Password |
+| `BREVO_API_KEY` | No | — | Brevo API key used to send email |
+| `EMAIL_FROM` | No | — | Sender address verified in Brevo |
 | `GOOGLE_CLIENT_ID` | No | — | Google OAuth Web Client ID |
 | `CURRENCY` | No | `INR` | Currency code |
 | `TIMEZONE` | No | `Asia/Kolkata` | Reminder timezone |
@@ -354,6 +363,8 @@ curl -X POST https://your-backend.onrender.com/api/internal/reminders \
 
 The endpoint uses a shared secret with constant-time comparison.
 
+> **Why email goes over HTTPS:** Render's free tier blocks outbound SMTP ports (25, 465, 587), so Gmail SMTP timed out in production. Reminders are now sent through Brevo's HTTPS API, which works on any host.
+
 ---
 
 ## ☁️ Deployment
@@ -364,7 +375,7 @@ The endpoint uses a shared secret with constant-time comparison.
 | Backend | Render |
 | Database | MongoDB Atlas |
 | AI | Google Gemini API |
-| Email | Gmail SMTP |
+| Email | Brevo transactional email API |
 | Scheduled reminders | External cron service |
 
 **Frontend (Vercel):** set root directory to `frontend` and add:
@@ -396,14 +407,21 @@ http://localhost:5173
 
 ## 🧪 Testing
 
-These flows were tested manually: registration, email/password login, Google auth, protected routes, subscription CRUD, dashboard and renewal calculations, AI recommendations, reminder triggering and automation, frontend/backend communication in production, API health checks, and environment configuration.
+**Automated** (24 tests with Node's built-in test runner, no database needed):
+
+```bash
+cd backend
+npm test
+```
+
+They cover date and cost logic (month-end clamping, leap years, renewal roll-forward), input validation, auth and cron guards, security headers, and rate limiting. GitHub Actions runs them on every push, together with frontend lint and build.
+
+**Manual** end-to-end flows: registration, email/password login, Google auth, subscription CRUD, dashboard calculations, AI recommendations, reminder emails, and frontend/backend communication in production.
 
 ```bash
 curl https://subscription-tracker-api-ut00.onrender.com/health
 # {"status": "ok"}
 ```
-
-> Automated unit and integration tests are planned.
 
 ---
 
@@ -418,17 +436,23 @@ curl https://subscription-tracker-api-ut00.onrender.com/health
 - Server-side financial calculations
 - AI request cooldown
 - Centralized error handling
+- `helmet` security headers
+- Rate limiting: 10 failed logins per 15 minutes, 10 signups per hour, and 300 API calls per 15 minutes per IP
+- Login takes the same time whether or not the email exists, so it doesn't reveal registered accounts
+- Linking Google sign-in to a password account removes the unverified password, which prevents account pre-hijacking
 
-Never expose `MONGO_URI`, `JWT_SECRET`, `GEMINI_API_KEY`, `EMAIL_PASS`, `CRON_SECRET`, or the Google OAuth Client Secret. Only the Google OAuth **Client ID** belongs in the frontend.
+Never expose `MONGO_URI`, `JWT_SECRET`, `GEMINI_API_KEY`, `BREVO_API_KEY`, `CRON_SECRET`, or the Google OAuth Client Secret. Only the Google OAuth **Client ID** belongs in the frontend.
 
 ---
 
 ## 🔮 Future Improvements
 
-- Automated unit and integration tests
-- GitHub Actions CI/CD
+- Integration tests against a test database
+- Continuous deployment (CI already runs tests, lint and build)
 - Docker containerization
-- Redis caching and rate limiting
+- Redis-backed rate limiting and caching (counters are in memory today)
+- Email verification for password signups
+- A custom sending domain with DKIM/DMARC for better email deliverability
 - More detailed spending trends
 - Push/browser notifications
 - Subscription sharing for families/teams

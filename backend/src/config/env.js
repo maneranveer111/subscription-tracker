@@ -22,4 +22,7 @@ export const env = {
   reminderCron: process.env.REMINDER_CRON || "0 9 * * *",
   timezone: process.env.TIMEZONE || "Asia/Kolkata",
   googleClientId: process.env.GOOGLE_CLIENT_ID || "",
+  brevoApiKey: process.env.BREVO_API_KEY || "",
+  emailFrom: process.env.EMAIL_FROM || "",
+  cronSecret: process.env.CRON_SECRET || "",
 };
