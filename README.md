@@ -2,7 +2,7 @@
 
 A full-stack app to track recurring subscriptions, manage renewal dates, analyze spending, get email reminders, and receive AI recommendations for subscriptions you may not be using.
 
-[🚀 Live Demo](https://subscription-tracker-bwynukg39-maneranveer111s-projects.vercel.app) • [📦 GitHub](https://github.com/maneranveer111/subscription-tracker) • [💚 API Health](https://subscription-tracker-api-ut00.onrender.com/health)
+[🚀 Live Demo](https://subscription-tracker-pink-eight.vercel.app) • [📦 GitHub](https://github.com/maneranveer111/subscription-tracker) • [💚 API Health](https://subscription-tracker-api-ut00.onrender.com/health)
 
 ---
 
